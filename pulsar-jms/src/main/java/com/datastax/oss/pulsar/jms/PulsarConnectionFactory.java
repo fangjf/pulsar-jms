@@ -29,21 +29,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import javax.jms.ConnectionFactory;
-import javax.jms.Destination;
+import javax.jms.*;
 import javax.jms.IllegalStateException;
-import javax.jms.InvalidClientIDException;
-import javax.jms.JMSContext;
-import javax.jms.JMSException;
-import javax.jms.JMSRuntimeException;
-import javax.jms.JMSSecurityException;
-import javax.jms.JMSSecurityRuntimeException;
-import javax.jms.Queue;
-import javax.jms.QueueConnection;
-import javax.jms.QueueConnectionFactory;
-import javax.jms.Topic;
-import javax.jms.TopicConnection;
-import javax.jms.TopicConnectionFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminException;
@@ -893,6 +880,8 @@ public class PulsarConnectionFactory
               .newConsumer()
               // these properties can be overridden by the configuration
               .negativeAckRedeliveryDelay(1, TimeUnit.SECONDS)
+              // always set this for Transactions
+              .isAckReceiptEnabled(sessionMode == Session.SESSION_TRANSACTED)
               .loadConf(getConsumerConfiguration())
               // these properties cannot be overwritten by the configuration
               .subscriptionInitialPosition(initialPosition)
@@ -973,8 +962,14 @@ public class PulsarConnectionFactory
         List<String> allTopics = pulsarAdmin.topics().getList(systemNamespace);
         for (String topic : allTopics) {
           log.info("Scanning topic {}", topic);
-          List<String> subscriptions = pulsarAdmin.topics().getSubscriptions(topic);
-          log.info("Subscriptions {}", subscriptions);
+          List<String> subscriptions;
+          try {
+            subscriptions = pulsarAdmin.topics().getSubscriptions(topic);
+            log.info("Subscriptions {}", subscriptions);
+          } catch (PulsarAdminException.NotFoundException notFound) {
+            log.error("Skipping topic {}", topic);
+            subscriptions = Collections.emptyList();
+          }
           for (String subscription : subscriptions) {
             log.info("Found subscription {} ", subscription);
             if (subscription.equals(name)) {

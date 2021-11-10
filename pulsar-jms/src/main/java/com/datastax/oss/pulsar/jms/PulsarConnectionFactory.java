@@ -55,6 +55,9 @@ import org.apache.pulsar.client.api.SubscriptionType;
 @Slf4j
 public class PulsarConnectionFactory
     implements ConnectionFactory, QueueConnectionFactory, TopicConnectionFactory, AutoCloseable {
+
+  private static final String PENDING_ACK_STORE_SUFFIX = "__transaction_pending_ack";
+
   private static final Set<String> clientIdentifiers = new ConcurrentSkipListSet<>();
 
   private final Map<String, Producer<byte[]>> producers = new ConcurrentHashMap<>();
@@ -880,8 +883,6 @@ public class PulsarConnectionFactory
               .newConsumer()
               // these properties can be overridden by the configuration
               .negativeAckRedeliveryDelay(1, TimeUnit.SECONDS)
-              // always set this for Transactions
-              .isAckReceiptEnabled(sessionMode == Session.SESSION_TRANSACTED)
               .loadConf(getConsumerConfiguration())
               // these properties cannot be overwritten by the configuration
               .subscriptionInitialPosition(initialPosition)
@@ -961,6 +962,11 @@ public class PulsarConnectionFactory
         // required for TCK, scan for all subscriptions
         List<String> allTopics = pulsarAdmin.topics().getList(systemNamespace);
         for (String topic : allTopics) {
+          if (topic.endsWith(PENDING_ACK_STORE_SUFFIX)) {
+            // skip Transaction related system topics
+            log.info("Ignoring system topic {}", topic);
+            continue;
+          }
           log.info("Scanning topic {}", topic);
           List<String> subscriptions;
           try {

@@ -17,12 +17,17 @@ package com.datastax.oss.pulsar.jms.tests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.datastax.oss.pulsar.jms.PulsarConnection;
 import com.datastax.oss.pulsar.jms.PulsarConnectionFactory;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import javax.jms.Destination;
-import javax.jms.JMSContext;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
+import javax.jms.TextMessage;
+
+import com.datastax.oss.pulsar.jms.PulsarSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -53,21 +58,26 @@ public class DockerTest {
       properties.put("webServiceUrl", pulsarContainer.getHttpServiceUrl());
       properties.put("enableTransaction", transactions);
       try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties);
-          JMSContext context =
-              factory.createContext(
-                  transactions ? JMSContext.SESSION_TRANSACTED : JMSContext.CLIENT_ACKNOWLEDGE);
-          JMSContext context2 =
-              factory.createContext(
-                  transactions ? JMSContext.SESSION_TRANSACTED : JMSContext.CLIENT_ACKNOWLEDGE)) {
-        Destination queue = context.createQueue("test");
-        context.createProducer().send(queue, "foo");
+           PulsarConnection connection1 = factory.createConnection();
+           PulsarConnection connection2 = factory.createConnection()) {
+        connection1.start();
+        connection2.start();
+        try (PulsarSession session1 = connection1.createSession(
+                transactions ? Session.SESSION_TRANSACTED : Session.CLIENT_ACKNOWLEDGE);
+             PulsarSession session2 = connection2.createSession(
+                     transactions ? Session.SESSION_TRANSACTED : Session.CLIENT_ACKNOWLEDGE)) {
+          Destination queue = session1.createQueue("test");
+          MessageProducer producer = session1.createProducer(queue);
+          producer.send(session1.createTextMessage("foo"));
         if (transactions) {
-          context.commit();
+          session1.commit();
         }
-        assertEquals("foo", context2.createConsumer(queue).receiveBody(String.class));
+        TextMessage message = (TextMessage) session2.createConsumer(queue).receive();
+        assertEquals("foo", message.getText());
         if (transactions) {
-          context2.commit();
+          session2.commit();
         }
+      }
       }
     }
   }

@@ -71,14 +71,6 @@ public final class PulsarObjectMessage extends PulsarMessage implements ObjectMe
   }
 
   @Override
-  public <T> T getBody(Class<T> c) throws JMSException {
-    if (object == null) {
-      return null;
-    }
-    return Utils.invoke(() -> c.cast(object));
-  }
-
-  @Override
   protected void prepareForSend(TypedMessageBuilder<byte[]> producer) throws JMSException {
     byte[] encoded = encode(object);
     producer.value(encoded);

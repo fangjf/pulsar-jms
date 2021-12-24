@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import javax.jms.CompletionListener;
 import javax.jms.DeliveryMode;
 import javax.jms.Destination;
 import javax.jms.IllegalStateException;
@@ -506,48 +505,6 @@ public abstract class PulsarMessage implements Message {
   @Override
   public void setJMSExpiration(long expiration) throws JMSException {
     this.jmsExpiration = expiration;
-  }
-
-  /**
-   * Gets the message's delivery time value.
-   *
-   * <p>When a message is sent, the {@code JMSDeliveryTime} header field is left unassigned. After
-   * completion of the {@code send} or {@code publish} method, it holds the delivery time of the
-   * message. This is the the difference, measured in milliseconds, between the delivery time and
-   * midnight, January 1, 1970 UTC.
-   *
-   * <p>A message's delivery time is the earliest time when a JMS provider may deliver the message
-   * to a consumer. The provider must not deliver messages before the delivery time has been
-   * reached.
-   *
-   * @return the message's delivery time value
-   * @throws JMSException if the JMS provider fails to get the delivery time due to some internal
-   *     error.
-   * @see Message#setJMSDeliveryTime(long)
-   * @since JMS 2.0
-   */
-  @Override
-  public long getJMSDeliveryTime() throws JMSException {
-    return jmsDeliveryTime;
-  }
-
-  /**
-   * Sets the message's delivery time value.
-   *
-   * <p>This method is for use by JMS providers only to set this field when a message is sent. This
-   * message cannot be used by clients to configure the delivery time of the message. This method is
-   * public to allow a JMS provider to set this field when sending a message whose implementation is
-   * not its own.
-   *
-   * @param deliveryTime the message's delivery time value
-   * @throws JMSException if the JMS provider fails to set the delivery time due to some internal
-   *     error.
-   * @see Message#getJMSDeliveryTime()
-   * @since JMS 2.0
-   */
-  @Override
-  public void setJMSDeliveryTime(long deliveryTime) throws JMSException {
-    this.jmsDeliveryTime = deliveryTime;
   }
 
   /**
@@ -1122,36 +1079,6 @@ public abstract class PulsarMessage implements Message {
 
   protected abstract String messageType();
 
-  final void sendAsync(
-      TypedMessageBuilder<byte[]> message,
-      CompletionListener completionListener,
-      PulsarSession session,
-      PulsarMessageProducer pulsarProducer,
-      boolean disableMessageTimestamp)
-      throws JMSException {
-    prepareForSend(message);
-    fillSystemPropertiesBeforeSend(message, disableMessageTimestamp, session);
-
-    message
-        .sendAsync()
-        .whenComplete(
-            (messageIdFromServer, error) -> {
-              Utils.executeCompletionListenerInSessionContext(
-                  session,
-                  pulsarProducer,
-                  () -> {
-                    this.writable = false;
-                    if (error != null) {
-                      completionListener.onException(this, Utils.handleException(error));
-                    } else {
-                      assignSystemMessageId(messageIdFromServer);
-
-                      completionListener.onCompletion(this);
-                    }
-                  });
-            });
-  }
-
   private void fillSystemPropertiesBeforeSend(
       TypedMessageBuilder<byte[]> message, boolean disableMessageTimestamp, PulsarSession session)
       throws MessageNotWriteableException {
@@ -1383,4 +1310,6 @@ public abstract class PulsarMessage implements Message {
   public org.apache.pulsar.client.api.Message<byte[]> getReceivedPulsarMessage() {
     return receivedPulsarMessage;
   }
+
+  public abstract boolean isBodyAssignableTo(Class c) throws JMSException;
 }

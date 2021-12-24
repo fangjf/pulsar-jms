@@ -47,7 +47,7 @@
     <java.release.version>8</java.release.version>
     <maven.compiler.source>8</maven.compiler.source>
     <maven.compiler.target>8</maven.compiler.target>
-    <jms.version>2.0.3</jms.version>
+    <jms.version>1.1.1</jms.version>
     <pulsar.version>2.8.1</pulsar.version>
     <activemq.version>5.16.1</activemq.version>
     <hawtbuf.version>1.11</hawtbuf.version>
@@ -129,8 +129,8 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>jakarta.jms</groupId>
-        <artifactId>jakarta.jms-api</artifactId>
+        <groupId>org.apache.geronimo.specs</groupId>
+        <artifactId>geronimo-jms_1.1_spec</artifactId>
         <version>${jms.version}</version>
       </dependency>
       <dependency>

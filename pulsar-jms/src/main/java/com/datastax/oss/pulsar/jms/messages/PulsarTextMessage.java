@@ -16,7 +16,6 @@
 package com.datastax.oss.pulsar.jms.messages;
 
 import com.datastax.oss.pulsar.jms.PulsarMessage;
-import com.datastax.oss.pulsar.jms.Utils;
 import java.nio.charset.StandardCharsets;
 import javax.jms.JMSException;
 import javax.jms.MessageNotWriteableException;
@@ -51,11 +50,6 @@ public final class PulsarTextMessage extends PulsarMessage implements TextMessag
   @Override
   public void clearBody() throws JMSException {
     this.text = null;
-  }
-
-  @Override
-  public <T> T getBody(Class<T> c) throws JMSException {
-    return Utils.invoke(() -> c.cast(text));
   }
 
   @Override

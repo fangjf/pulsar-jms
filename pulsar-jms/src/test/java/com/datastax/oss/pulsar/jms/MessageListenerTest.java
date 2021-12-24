@@ -20,8 +20,6 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.datastax.oss.pulsar.jms.utils.PulsarCluster;
 import java.nio.file.Path;
@@ -30,21 +28,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import javax.jms.CompletionListener;
-import javax.jms.Connection;
 import javax.jms.IllegalStateException;
-import javax.jms.IllegalStateRuntimeException;
-import javax.jms.JMSConsumer;
-import javax.jms.JMSContext;
-import javax.jms.JMSProducer;
 import javax.jms.Message;
-import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
-import javax.jms.MessageProducer;
 import javax.jms.Queue;
-import javax.jms.Session;
 import javax.jms.TextMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
@@ -77,17 +64,17 @@ public class MessageListenerTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
             SimpleMessageListener listener = new SimpleMessageListener();
             consumer1.setMessageListener(listener);
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 producer.send(session.createTextMessage("foo-" + i));
               }
@@ -96,7 +83,8 @@ public class MessageListenerTest {
             await().until(listener.receivedMessages::size, equalTo(10));
 
             for (int i = 0; i < 10; i++) {
-              assertEquals("foo-" + i, listener.receivedMessages.get(i).getBody(String.class));
+              TextMessage message = (TextMessage)listener.receivedMessages.get(i);
+              assertEquals("foo-" + i, message.getText());
             }
           }
         }
@@ -110,13 +98,13 @@ public class MessageListenerTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
             CompletableFuture<Message> res = new CompletableFuture<>();
             MessageListener listener =
                 new MessageListener() {
@@ -132,7 +120,7 @@ public class MessageListenerTest {
                 };
             consumer1.setMessageListener(listener);
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               producer.send(session.createTextMessage("foo"));
             }
 
@@ -143,7 +131,7 @@ public class MessageListenerTest {
             }
           }
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
             CompletableFuture<Message> res = new CompletableFuture<>();
             MessageListener listener =
                 new MessageListener() {
@@ -159,7 +147,7 @@ public class MessageListenerTest {
                 };
             consumer1.setMessageListener(listener);
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               producer.send(session.createTextMessage("foo"));
             }
 
@@ -180,24 +168,24 @@ public class MessageListenerTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
           Queue destination2 =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination);
-              MessageConsumer consumer2 = session.createConsumer(destination2); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination);
+               PulsarMessageConsumer consumer2 = session.createConsumer(destination2); ) {
             SimpleMessageListener listener1 = new SimpleMessageListener();
             consumer1.setMessageListener(listener1);
 
             SimpleMessageListener listener2 = new SimpleMessageListener();
             consumer2.setMessageListener(listener2);
 
-            try (MessageProducer producer = session.createProducer(null); ) {
+            try (PulsarMessageProducer producer = session.createProducer(null); ) {
               for (int i = 0; i < 10; i++) {
                 producer.send(destination, session.createTextMessage("foo-" + i + "-1"));
                 producer.send(destination2, session.createTextMessage("foo-" + i + "-2"));
@@ -208,302 +196,16 @@ public class MessageListenerTest {
             await().until(listener2.receivedMessages::size, equalTo(10));
 
             for (int i = 0; i < 10; i++) {
+              TextMessage message1 = (TextMessage)listener1.receivedMessages.get(i);
+              TextMessage message2 = (TextMessage)listener2.receivedMessages.get(i);
               assertEquals(
-                  "foo-" + i + "-1", listener1.receivedMessages.get(i).getBody(String.class));
+                  "foo-" + i + "-1", message1.getText());
               assertEquals(
-                  "foo-" + i + "-2", listener2.receivedMessages.get(i).getBody(String.class));
+                  "foo-" + i + "-2", message2.getText());
             }
           }
         }
       }
-    }
-  }
-
-  @Test
-  public void testJMSContextWithListener() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (JMSContext context = factory.createContext()) {
-
-        Queue destination =
-            context.createQueue("persistent://public/default/test-" + UUID.randomUUID());
-
-        try (JMSConsumer consumer1 = context.createConsumer(destination); ) {
-          SimpleMessageListener listener = new SimpleMessageListener();
-          consumer1.setMessageListener(listener);
-
-          for (int i = 0; i < 10; i++) {
-            context.createProducer().send(destination, "foo-" + i);
-          }
-
-          // wait for messages to arrive
-          await().until(listener.receivedMessages::size, equalTo(10));
-
-          for (int i = 0; i < 10; i++) {
-            assertEquals("foo-" + i, listener.receivedMessages.get(i).getBody(String.class));
-          }
-        }
-      }
-    }
-  }
-
-  @Test
-  public void testJMSContextWithListenerBadMethods() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-
-      try (JMSContext context2 = factory.createContext()) {
-
-        try (JMSContext context = factory.createContext()) {
-          Queue destination =
-              context2.createQueue("persistent://public/default/test-" + UUID.randomUUID());
-
-          try (JMSConsumer consumer1 = context.createConsumer(destination); ) {
-            CompletableFuture<Message> res = new CompletableFuture<>();
-            MessageListener listener =
-                new MessageListener() {
-                  @Override
-                  public void onMessage(Message message) {
-                    try {
-                      context.close();
-                      res.complete(message);
-                    } catch (Throwable t) {
-                      res.completeExceptionally(t);
-                    }
-                  }
-                };
-            consumer1.setMessageListener(listener);
-
-            context2.createProducer().send(destination, "foo");
-
-            // context.close is not allowed in the listener
-            try {
-              res.get();
-            } catch (ExecutionException err) {
-              assertThat(err.getCause(), instanceOf(IllegalStateRuntimeException.class));
-            }
-          }
-
-          try (JMSConsumer consumer2 = context2.createConsumer(destination); ) {
-            CompletableFuture<Message> res = new CompletableFuture<>();
-            MessageListener listener =
-                new MessageListener() {
-                  @Override
-                  public void onMessage(Message message) {
-                    try {
-                      context2.stop();
-                      res.complete(message);
-                    } catch (Throwable t) {
-                      res.completeExceptionally(t);
-                    }
-                  }
-                };
-            consumer2.setMessageListener(listener);
-            context2.createProducer().send(destination, "foo");
-
-            // context.stop is not allowed
-            try {
-              res.get();
-            } catch (ExecutionException err) {
-              assertThat(err.getCause(), instanceOf(IllegalStateRuntimeException.class));
-            }
-          }
-        }
-      }
-    }
-  }
-
-  @Test
-  public void testJMSContextAsyncCompletionListenerBadMethods() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-
-      try (JMSContext context2 = factory.createContext()) {
-        Queue destination =
-            context2.createQueue("persistent://public/default/test-" + UUID.randomUUID());
-
-        try (JMSContext context = factory.createContext()) {
-
-          CompletableFuture<Message> resSendAndClose = new CompletableFuture<>();
-          context2
-              .createProducer()
-              .setAsync(
-                  new CompletionListener() {
-                    @Override
-                    public void onCompletion(Message message) {
-                      try {
-                        context.close();
-                        resSendAndClose.complete(message);
-                      } catch (Throwable t) {
-                        resSendAndClose.completeExceptionally(t);
-                      }
-                    }
-
-                    @Override
-                    public void onException(Message message, Exception e) {
-                      onCompletion(message);
-                    }
-                  })
-              .send(destination, "foo");
-
-          // context.close is not allowed in the listener
-          try {
-            resSendAndClose.get();
-          } catch (ExecutionException err) {
-            assertThat(err.getCause(), instanceOf(IllegalStateRuntimeException.class));
-          }
-
-          CompletableFuture<Message> resSendAndStop = new CompletableFuture<>();
-          context2
-              .createProducer()
-              .setAsync(
-                  new CompletionListener() {
-                    @Override
-                    public void onCompletion(Message message) {
-                      try {
-                        context.stop();
-                        resSendAndStop.complete(message);
-                      } catch (Throwable t) {
-                        resSendAndStop.completeExceptionally(t);
-                      }
-                    }
-
-                    @Override
-                    public void onException(Message message, Exception e) {
-                      onCompletion(message);
-                    }
-                  })
-              .send(destination, "foo");
-
-          // context.stop is not allowed in the listener
-          try {
-            resSendAndStop.get();
-          } catch (ExecutionException err) {
-            assertThat(err.getCause(), instanceOf(IllegalStateRuntimeException.class));
-          }
-        }
-      }
-    }
-  }
-
-  @Test
-  public void queueSendRecvMessageListenerTest() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-
-      Queue destination = new PulsarQueue("persistent://public/default/test-" + UUID.randomUUID());
-
-      JMSContext context = factory.createContext(JMSContext.AUTO_ACKNOWLEDGE);
-      JMSContext contextToSendMsg = factory.createContext(JMSContext.AUTO_ACKNOWLEDGE);
-      JMSContext contextToCreateMsg = factory.createContext(JMSContext.AUTO_ACKNOWLEDGE);
-
-      JMSProducer producer = contextToSendMsg.createProducer();
-
-      JMSConsumer consumer = context.createConsumer(destination);
-
-      // Creates a new consumer on the specified destination that
-      // will deliver messages to the specified MessageListener.
-      SimpleMessageListener listener = new SimpleMessageListener();
-      consumer.setMessageListener(listener);
-
-      // send and receive TextMessage
-      TextMessage expTextMessage = contextToCreateMsg.createTextMessage("foo");
-      expTextMessage.setStringProperty("COM_SUN_JMS_TESTNAME", "queueSendRecvMessageListenerTest");
-      producer.send(destination, expTextMessage);
-
-      await().until(listener.receivedMessages::size, equalTo(1));
-
-      TextMessage actTextMessage = (TextMessage) listener.receivedMessages.get(0);
-      assertEquals(actTextMessage.getText(), expTextMessage.getText());
-
-      assertNotNull(consumer.getMessageListener());
-    }
-  }
-
-  @Test
-  public void closeConsumerOnMessageListener() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-
-      Queue destination = new PulsarQueue("persistent://public/default/test-" + UUID.randomUUID());
-
-      JMSContext context = factory.createContext(JMSContext.AUTO_ACKNOWLEDGE);
-      JMSProducer producer = context.createProducer();
-      JMSConsumer consumer = context.createConsumer(destination);
-
-      AtomicInteger count = new AtomicInteger();
-      AtomicReference<Message> received = new AtomicReference<>();
-      consumer.setMessageListener(
-          new MessageListener() {
-            @Override
-            public void onMessage(Message message) {
-              count.incrementAndGet();
-              consumer.close();
-              received.set(message);
-            }
-          });
-
-      producer.send(destination, "test");
-
-      await().until(received::get, i -> i != null);
-
-      TextMessage actTextMessage = (TextMessage) received.get();
-      assertEquals(actTextMessage.getText(), "test");
-
-      // the consumer is closed you cannot call "getMessageListener"
-      assertThrows(IllegalStateRuntimeException.class, consumer::getMessageListener);
-
-      producer.send(destination, "test2");
-
-      // assert that the consumer did not receive other messages
-      Thread.sleep(2000);
-      assertEquals(1, count.get());
-    }
-  }
-
-  @Test
-  public void messageListenerInternalError() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-
-      Queue destination = new PulsarQueue("persistent://public/default/test-" + UUID.randomUUID());
-
-      JMSContext context = factory.createContext(JMSContext.AUTO_ACKNOWLEDGE);
-      JMSProducer producer = context.createProducer();
-      JMSConsumer consumer = context.createConsumer(destination);
-
-      AtomicInteger count = new AtomicInteger();
-      AtomicReference<Message> received = new AtomicReference<>();
-      consumer.setMessageListener(
-          new MessageListener() {
-            @Override
-            public void onMessage(Message message) {
-              log.info("Received #" + count + " -> " + message);
-              if (count.incrementAndGet() == 1) {
-                throw new RuntimeException("Error !");
-              }
-              received.set(message);
-            }
-          });
-
-      producer.send(destination, "test");
-
-      await().until(received::get, i -> i != null);
-
-      TextMessage actTextMessage = (TextMessage) received.get();
-      assertEquals(actTextMessage.getText(), "test");
     }
   }
 }

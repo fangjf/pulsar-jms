@@ -30,12 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
-import javax.jms.Connection;
-import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
 import javax.jms.Queue;
-import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -69,16 +64,16 @@ public class QueueTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination);
-              MessageConsumer consumer2 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination);
+               PulsarMessageConsumer consumer2 = session.createConsumer(destination); ) {
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 producer.send(session.createTextMessage("foo-" + i));
               }
@@ -116,28 +111,28 @@ public class QueueTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(Session.CLIENT_ACKNOWLEDGE); ) {
+        try (PulsarSession session = connection.createSession(Session.CLIENT_ACKNOWLEDGE); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageProducer producer = session.createProducer(destination); ) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
             producer.send(session.createTextMessage("foo"));
           }
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
-            Message message = consumer1.receive();
-            assertEquals("foo", message.getBody(String.class));
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
+            TextMessage message = (TextMessage)consumer1.receive();
+            assertEquals("foo", message.getText());
             assertEquals(1, message.getIntProperty("JMSXDeliveryCount"));
             assertFalse(message.getJMSRedelivered());
           }
 
           // close consumer, message not acked, so it must be redelivered
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
-            Message message = consumer1.receive();
-            assertEquals("foo", message.getBody(String.class));
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
+            TextMessage message = (TextMessage)consumer1.receive();
+            assertEquals("foo", message.getText());
 
             // Unfortunately Pulsar does not set properly the redelivery count
             // so these assertions are testing the bad behaviour
@@ -156,13 +151,13 @@ public class QueueTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.enableClientSideEmulation", "false");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageProducer producer = session.createProducer(destination); ) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
             for (int i = 0; i < numMessages; i++) {
               TextMessage textMessage = session.createTextMessage("foo-" + i);
               textMessage.setBooleanProperty("lastMessage", i == numMessages - 1);
@@ -171,7 +166,7 @@ public class QueueTest {
           }
 
           // scan from the beginning, no one consumed messages
-          try (QueueBrowser browser = session.createBrowser(destination)) {
+          try (PulsarQueueBrowser browser = session.createBrowser(destination)) {
             Enumeration en = browser.getEnumeration();
             int i = 0;
             while (en.hasMoreElements()) {
@@ -190,7 +185,7 @@ public class QueueTest {
           }
 
           // scan with selector
-          try (QueueBrowser browser = session.createBrowser(destination, "lastMessage=true")) {
+          try (PulsarQueueBrowser browser = session.createBrowser(destination, "lastMessage=true")) {
             Enumeration en = browser.getEnumeration();
             int count = 0;
             while (en.hasMoreElements()) {
@@ -204,7 +199,7 @@ public class QueueTest {
           }
 
           // scan again without calling hasMoreElements explicitly
-          try (QueueBrowser browser = session.createBrowser(destination)) {
+          try (PulsarQueueBrowser browser = session.createBrowser(destination)) {
             Enumeration en = browser.getEnumeration();
             for (int i = 0; i < numMessages; i++) {
               TextMessage msg = (TextMessage) en.nextElement();
@@ -218,7 +213,7 @@ public class QueueTest {
             }
           }
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
             // consume half queue
             for (int i = 0; i < numMessages / 2; i++) {
               TextMessage msg = (TextMessage) consumer1.receive();
@@ -228,7 +223,7 @@ public class QueueTest {
           }
 
           // browser unconsumed messages
-          try (QueueBrowser browser = session.createBrowser(destination)) {
+          try (PulsarQueueBrowser browser = session.createBrowser(destination)) {
             Enumeration en = browser.getEnumeration();
             for (int i = numMessages / 2; i < numMessages; i++) {
               TextMessage msg = (TextMessage) en.nextElement();
@@ -237,7 +232,7 @@ public class QueueTest {
           }
 
           // consume the rest of the queue
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
             // consume half queue
             for (int i = numMessages / 2; i < numMessages; i++) {
               TextMessage msg = (TextMessage) consumer1.receive();
@@ -249,7 +244,7 @@ public class QueueTest {
 
           // now the queue is empty (but Pulsar "peek" still returns the last consumed message in
           // this case)
-          try (QueueBrowser browser = session.createBrowser(destination)) {
+          try (PulsarQueueBrowser browser = session.createBrowser(destination)) {
             Enumeration en = browser.getEnumeration();
             TextMessage msg = (TextMessage) en.nextElement();
             log.info("next {} {}", msg, msg.getJMSMessageID());
@@ -257,7 +252,7 @@ public class QueueTest {
             assertFalse(en.hasMoreElements());
           }
           // validate again this kind of bug
-          try (QueueBrowser browser = session.createBrowser(destination)) {
+          try (PulsarQueueBrowser browser = session.createBrowser(destination)) {
             Enumeration en = browser.getEnumeration();
             TextMessage msg = (TextMessage) en.nextElement();
             log.info("next {} {}", msg, msg.getJMSMessageID());
@@ -266,14 +261,14 @@ public class QueueTest {
           }
 
           // still validate that the queue is empty
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
             assertNull(consumer1.receive(1000));
           }
 
           // browse a brand new empty queue
           Queue destinationEmpty =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
-          try (QueueBrowser browser = session.createBrowser(destinationEmpty)) {
+          try (PulsarQueueBrowser browser = session.createBrowser(destinationEmpty)) {
             Enumeration en = browser.getEnumeration();
             assertFalse(en.hasMoreElements());
             try {
@@ -295,14 +290,14 @@ public class QueueTest {
     properties.put("jms.usePulsarAdmin", "false");
 
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         assertFalse(factory.isUsePulsarAdmin());
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageProducer producer = session.createProducer(destination); ) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
             for (int i = 0; i < 10; i++) {
               producer.send(session.createTextMessage("foo-" + i));
             }
@@ -310,9 +305,10 @@ public class QueueTest {
 
           // verify that we can catch up from the beginning of the queue
           // even without using PulsarAdmin
-          try (MessageConsumer consumer1 = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination); ) {
             for (int i = 0; i < 10; i++) {
-              assertEquals("foo-" + i, consumer1.receive().getBody(String.class));
+              TextMessage message = (TextMessage)consumer1.receive();
+              assertEquals("foo-" + i, message.getText());
             }
 
             // no more messages

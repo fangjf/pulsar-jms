@@ -25,16 +25,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import javax.jms.Connection;
 import javax.jms.Destination;
-import javax.jms.JMSConsumer;
-import javax.jms.JMSContext;
 import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
 import javax.jms.Queue;
-import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -71,17 +64,17 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
 
-        try (Session consumerSession = connection.createSession(); ) {
+        try (PulsarSession consumerSession = connection.createSession(); ) {
           Destination destination =
               consumerSession.createTopic("persistent://public/default/test-" + UUID.randomUUID());
-          try (MessageConsumer consumer = consumerSession.createConsumer(destination)) {
+          try (PulsarMessageConsumer consumer = consumerSession.createConsumer(destination)) {
 
-            try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+            try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-              try (MessageProducer producer = transaction.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = transaction.createProducer(destination); ) {
                 TextMessage textMsg = transaction.createTextMessage("foo");
                 producer.send(textMsg);
                 producer.send(textMsg);
@@ -109,17 +102,17 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
 
-        try (Session consumerSession = connection.createSession(); ) {
+        try (PulsarSession consumerSession = connection.createSession(); ) {
           Destination destination =
               consumerSession.createTopic("persistent://public/default/test-" + UUID.randomUUID());
-          try (MessageConsumer consumer = consumerSession.createConsumer(destination)) {
+          try (PulsarMessageConsumer consumer = consumerSession.createConsumer(destination)) {
 
-            try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+            try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-              try (MessageProducer producer = transaction.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = transaction.createProducer(destination); ) {
                 TextMessage textMsg = transaction.createTextMessage("foo");
                 producer.send(textMsg);
               }
@@ -144,17 +137,17 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
 
-        try (Session consumerSession = connection.createSession(); ) {
+        try (PulsarSession consumerSession = connection.createSession(); ) {
           Destination destination =
               consumerSession.createTopic("persistent://public/default/test-" + UUID.randomUUID());
-          try (MessageConsumer consumer = consumerSession.createConsumer(destination)) {
+          try (PulsarMessageConsumer consumer = consumerSession.createConsumer(destination)) {
 
-            try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+            try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-              try (MessageProducer producer = transaction.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = transaction.createProducer(destination); ) {
                 TextMessage textMsg = transaction.createTextMessage("foo");
                 producer.send(textMsg);
               }
@@ -180,30 +173,30 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
 
-        try (Session producerSession = connection.createSession(); ) {
+        try (PulsarSession producerSession = connection.createSession(); ) {
           Destination destination =
               producerSession.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+          try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-            try (MessageConsumer consumer = transaction.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = transaction.createConsumer(destination); ) {
 
-              try (MessageProducer producer = producerSession.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = producerSession.createProducer(destination); ) {
                 TextMessage textMsg = producerSession.createTextMessage("foo");
                 producer.send(textMsg);
               }
 
-              Message receive = consumer.receive();
-              assertEquals("foo", receive.getBody(String.class));
+              TextMessage receive = (TextMessage)consumer.receive();
+              assertEquals("foo", receive.getText());
             }
 
             transaction.commit();
 
             // message has been committed by the transacted session
-            try (MessageConsumer consumer = producerSession.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = producerSession.createConsumer(destination); ) {
               assertNull(consumer.receive(1000));
             }
           }
@@ -219,33 +212,33 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
 
-        try (Session producerSession = connection.createSession(); ) {
+        try (PulsarSession producerSession = connection.createSession(); ) {
           Destination destination =
               producerSession.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+          try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-            try (MessageConsumer consumer = transaction.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = transaction.createConsumer(destination); ) {
 
-              try (MessageProducer producer = producerSession.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = producerSession.createProducer(destination); ) {
                 producer.send(producerSession.createTextMessage("foo0"));
                 producer.send(producerSession.createTextMessage("foo1"));
               }
 
-              Message receive = consumer.receive();
-              assertEquals("foo0", receive.getBody(String.class));
+              TextMessage receive = (TextMessage) consumer.receive();
+              assertEquals("foo0", receive.getText());
               transaction.commit();
 
-              receive = consumer.receive();
-              assertEquals("foo1", receive.getBody(String.class));
+              receive = (TextMessage) consumer.receive();
+              assertEquals("foo1", receive.getText());
               transaction.commit();
             }
 
             // messages have been committed by the transacted session
-            try (MessageConsumer consumer = producerSession.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = producerSession.createConsumer(destination); ) {
               assertNull(consumer.receive(1000));
             }
           }
@@ -261,31 +254,31 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
 
-        try (Session producerSession = connection.createSession(); ) {
+        try (PulsarSession producerSession = connection.createSession(); ) {
           Destination destination =
               producerSession.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+          try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-            try (MessageConsumer consumer = transaction.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = transaction.createConsumer(destination); ) {
 
-              try (MessageProducer producer = producerSession.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = producerSession.createProducer(destination); ) {
                 TextMessage textMsg = producerSession.createTextMessage("foo");
                 producer.send(textMsg);
               }
 
-              Message receive = consumer.receive();
-              assertEquals("foo", receive.getBody(String.class));
+              TextMessage receive = (TextMessage) consumer.receive();
+              assertEquals("foo", receive.getText());
             }
 
             transaction.rollback();
 
             // the consumer rolledback the transaction, now we can receive the message from
             // another client
-            try (MessageConsumer consumer = producerSession.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = producerSession.createConsumer(destination); ) {
               assertNotNull(consumer.receive());
             }
           }
@@ -302,26 +295,26 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection();
-          Connection connection2 = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection();
+           PulsarConnection connection2 = factory.createConnection()) {
         connection.start();
 
-        try (Session producerSession = connection.createSession(); ) {
+        try (PulsarSession producerSession = connection.createSession(); ) {
           Queue destination =
               producerSession.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+          try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-            try (MessageConsumer consumer = transaction.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = transaction.createConsumer(destination); ) {
 
-              try (MessageProducer producer = producerSession.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = producerSession.createProducer(destination); ) {
                 for (int i = 0; i < numMessages; i++) {
                   TextMessage textMsg = producerSession.createTextMessage("foo" + i);
                   producer.send(textMsg);
                 }
               }
 
-              try (QueueBrowser counter = producerSession.createBrowser(destination)) {
+              try (PulsarQueueBrowser counter = producerSession.createBrowser(destination)) {
                 int count = 0;
                 for (Enumeration e = counter.getEnumeration(); e.hasMoreElements(); ) {
                   TextMessage msg = (TextMessage) e.nextElement();
@@ -332,11 +325,11 @@ public class TransactionsTest {
               }
 
               // transactional consumer, receives but it does not commit
-              Message receive = consumer.receive();
-              assertEquals("foo0", receive.getBody(String.class));
+              TextMessage receive = (TextMessage)consumer.receive();
+              assertEquals("foo0", receive.getText());
 
               // the QueueBrowser still sees the message
-              try (QueueBrowser counter = producerSession.createBrowser(destination)) {
+              try (PulsarQueueBrowser counter = producerSession.createBrowser(destination)) {
                 int count = 0;
                 for (Enumeration e = counter.getEnumeration(); e.hasMoreElements(); ) {
                   TextMessage msg = (TextMessage) e.nextElement();
@@ -351,15 +344,15 @@ public class TransactionsTest {
 
             connection2.start();
 
-            try (Session secondSession = connection2.createSession();
-                MessageConsumer consumer = secondSession.createConsumer(destination); ) {
+            try (PulsarSession secondSession = connection2.createSession();
+                 PulsarMessageConsumer consumer = secondSession.createConsumer(destination); ) {
               assertNotNull(consumer.receive());
 
               // it looks like peekMessage is not following the subscription in realtime
               Thread.sleep(2000);
 
               // the QueueBrowser does not see the consumed message anymore
-              try (QueueBrowser counter = secondSession.createBrowser(destination)) {
+              try (PulsarQueueBrowser counter = secondSession.createBrowser(destination)) {
                 // skip first message
                 int count = 1;
                 for (Enumeration e = counter.getEnumeration(); e.hasMoreElements(); ) {
@@ -385,19 +378,19 @@ public class TransactionsTest {
     properties.put("enableTransaction", "true");
 
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection();
-          Connection connection2 = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection();
+           PulsarConnection connection2 = factory.createConnection()) {
         connection.start();
 
-        try (Session producerSession = connection.createSession(); ) {
+        try (PulsarSession producerSession = connection.createSession(); ) {
           Queue destination =
               producerSession.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+          try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-            try (MessageConsumer consumer = transaction.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = transaction.createConsumer(destination); ) {
 
-              try (MessageProducer producer = producerSession.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = producerSession.createProducer(destination); ) {
                 for (int i = 0; i < numMessages; i++) {
                   TextMessage textMsg = producerSession.createTextMessage("foo" + i);
                   producer.send(textMsg);
@@ -429,9 +422,9 @@ public class TransactionsTest {
     }
   }
 
-  private static int countMessages(Session producerSession, Queue destination) throws JMSException {
+  private static int countMessages(PulsarSession producerSession, Queue destination) throws JMSException {
     int count = 0;
-    try (QueueBrowser counter = producerSession.createBrowser(destination)) {
+    try (PulsarQueueBrowser counter = producerSession.createBrowser(destination)) {
       for (Enumeration e = counter.getEnumeration(); e.hasMoreElements(); ) {
         TextMessage msg = (TextMessage) e.nextElement();
         log.info("count {} msg {}", count, msg.getText());
@@ -449,26 +442,26 @@ public class TransactionsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("enableTransaction", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection();
-          Connection connection2 = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection();
+           PulsarConnection connection2 = factory.createConnection()) {
         connection.start();
 
-        try (Session producerSession = connection.createSession(); ) {
+        try (PulsarSession producerSession = connection.createSession(); ) {
           Queue destination =
               producerSession.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (Session transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
+          try (PulsarSession transaction = connection.createSession(Session.SESSION_TRANSACTED); ) {
 
-            try (MessageConsumer consumer = transaction.createConsumer(destination); ) {
+            try (PulsarMessageConsumer consumer = transaction.createConsumer(destination); ) {
 
-              try (MessageProducer producer = producerSession.createProducer(destination); ) {
+              try (PulsarMessageProducer producer = producerSession.createProducer(destination); ) {
                 for (int i = 0; i < numMessages; i++) {
                   TextMessage textMsg = producerSession.createTextMessage("foo" + i);
                   producer.send(textMsg);
                 }
               }
 
-              try (QueueBrowser counter = producerSession.createBrowser(destination)) {
+              try (PulsarQueueBrowser counter = producerSession.createBrowser(destination)) {
                 int count = 0;
                 for (Enumeration e = counter.getEnumeration(); e.hasMoreElements(); ) {
                   TextMessage msg = (TextMessage) e.nextElement();
@@ -479,11 +472,11 @@ public class TransactionsTest {
               }
 
               // transactional consumer, receives but it does not commit
-              Message receive = consumer.receive();
-              assertEquals("foo0", receive.getBody(String.class));
+              TextMessage receive = (TextMessage)consumer.receive();
+              assertEquals("foo0", receive.getText());
 
               // the QueueBrowser still sees the message
-              try (QueueBrowser counter = producerSession.createBrowser(destination)) {
+              try (PulsarQueueBrowser counter = producerSession.createBrowser(destination)) {
                 int count = 0;
                 for (Enumeration e = counter.getEnumeration(); e.hasMoreElements(); ) {
                   TextMessage msg = (TextMessage) e.nextElement();
@@ -498,15 +491,15 @@ public class TransactionsTest {
 
             connection2.start();
 
-            try (Session secondSession = connection2.createSession();
-                MessageConsumer consumer = secondSession.createConsumer(destination); ) {
+            try (PulsarSession secondSession = connection2.createSession();
+                 PulsarMessageConsumer consumer = secondSession.createConsumer(destination); ) {
               assertNotNull(consumer.receive());
 
               // it looks like peekMessage is not following the subscription in realtime
               Thread.sleep(2000);
 
               // the QueueBrowser does not see the consumed message anymore
-              try (QueueBrowser counter = secondSession.createBrowser(destination)) {
+              try (PulsarQueueBrowser counter = secondSession.createBrowser(destination)) {
                 // skip first message
                 int count = 1;
                 for (Enumeration e = counter.getEnumeration(); e.hasMoreElements(); ) {
@@ -519,54 +512,6 @@ public class TransactionsTest {
             }
           }
         }
-      }
-    }
-  }
-
-  @Test
-  public void sendMessageJMSContextTest() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    properties.put("enableTransaction", "true");
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (JMSContext context = factory.createContext(JMSContext.SESSION_TRANSACTED)) {
-        Destination destination =
-            context.createQueue("persistent://public/default/test-" + UUID.randomUUID());
-        int numMessages = 10;
-        int sendMsgCounter = 0;
-        for (int i = 0; i < numMessages; i++) {
-          context.createProducer().send(destination, "foo-" + sendMsgCounter);
-          sendMsgCounter++;
-        }
-        JMSConsumer consumer = context.createConsumer(destination);
-
-        // Call rollback() to rollback the sent messages
-        context.rollback();
-
-        assertNull((TextMessage) consumer.receive(1000));
-
-        for (int i = 0; i < numMessages; i++) {
-          context.createProducer().send(destination, "foo" + sendMsgCounter);
-          sendMsgCounter++;
-        }
-
-        // Call commit() to commit the sent messages
-        context.commit();
-
-        int receiveCount = 10;
-        for (int i = 0; i < numMessages; i++) {
-          Message received = consumer.receive(1000);
-          assertNotNull(received);
-          assertEquals("foo" + receiveCount, received.getBody(String.class));
-          receiveCount++;
-        }
-
-        // no more messages
-        assertNull((TextMessage) consumer.receive(1000));
-
-        // acknowledge
-        context.commit();
       }
     }
   }

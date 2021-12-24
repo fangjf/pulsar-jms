@@ -25,12 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import javax.jms.BytesMessage;
-import javax.jms.Connection;
 import javax.jms.Destination;
-import javax.jms.JMSConsumer;
-import javax.jms.JMSContext;
-import javax.jms.MessageProducer;
-import javax.jms.Session;
 import javax.jms.TextMessage;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
@@ -66,8 +61,9 @@ public class PulsarInteropTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
-        try (Session session = connection.createSession(); ) {
+      try (PulsarConnection connection = factory.createConnection()) {
+        connection.start();
+        try (PulsarSession session = connection.createSession(); ) {
           String topic = "persistent://public/default/test-" + UUID.randomUUID();
           Destination destination = session.createTopic(topic);
 
@@ -79,7 +75,7 @@ public class PulsarInteropTest {
           try (Consumer<String> consumer =
               client.newConsumer(Schema.STRING).subscriptionName("test").topic(topic).subscribe()) {
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               TextMessage textMsg = session.createTextMessage("foo");
               textMsg.setStringProperty("JMSXGroupID", "bar");
               producer.send(textMsg);
@@ -100,26 +96,30 @@ public class PulsarInteropTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (JMSContext context = factory.createContext()) {
+      try (PulsarConnection connection = factory.createConnection()) {
+        connection.start();
+        try (PulsarSession session = connection.createSession()) {
 
-        String topic = "persistent://public/default/test-" + UUID.randomUUID();
-        Destination destination = context.createTopic(topic);
+          String topic = "persistent://public/default/test-" + UUID.randomUUID();
+          Destination destination = session.createTopic(topic);
 
-        PulsarClient client =
-            cluster
-                .getService()
-                .getClient(); // do not close this client, it is internal to the broker
-        try (JMSConsumer consumer = context.createConsumer(destination)) {
+          PulsarClient client =
+                  cluster
+                          .getService()
+                          .getClient(); // do not close this client, it is internal to the broker
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination)) {
 
-          try (Producer<String> producer =
-              client.newProducer(Schema.STRING).topic(topic).create(); ) {
-            producer.newMessage().value("foo").key("bar").send();
+            try (Producer<String> producer =
+                         client.newProducer(Schema.STRING).topic(topic).create();) {
+              producer.newMessage().value("foo").key("bar").send();
 
-            // the JMS client reads raw messages always as BytesMessage
-            BytesMessage message = (BytesMessage) consumer.receive();
-            assertArrayEquals(
-                "foo".getBytes(StandardCharsets.UTF_8), message.getBody(byte[].class));
-            assertEquals("bar", message.getStringProperty("JMSXGroupID"));
+              // the JMS client reads raw messages always as BytesMessage
+              BytesMessage message = (BytesMessage) consumer.receive();
+              byte[] body = new byte[(int) message.getBodyLength()];
+              message.readBytes(body);
+              assertArrayEquals("foo".getBytes(StandardCharsets.UTF_8), body);
+              assertEquals("bar", message.getStringProperty("JMSXGroupID"));
+            }
           }
         }
       }

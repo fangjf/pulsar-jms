@@ -16,21 +16,6 @@
 package com.datastax.oss.pulsar.jms;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
-import javax.jms.*;
-import javax.jms.IllegalStateException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminException;
@@ -51,6 +36,32 @@ import org.apache.pulsar.client.api.ReaderBuilder;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import org.apache.pulsar.client.api.SubscriptionMode;
 import org.apache.pulsar.client.api.SubscriptionType;
+
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+import javax.jms.IllegalStateException;
+import javax.jms.InvalidClientIDException;
+import javax.jms.JMSException;
+import javax.jms.JMSSecurityException;
+import javax.jms.Queue;
+import javax.jms.QueueConnection;
+import javax.jms.QueueConnectionFactory;
+import javax.jms.Topic;
+import javax.jms.TopicConnection;
+import javax.jms.TopicConnectionFactory;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 @Slf4j
 public class PulsarConnectionFactory
@@ -423,287 +434,7 @@ public class PulsarConnectionFactory
     }
   }
 
-  /**
-   * Creates a JMSContext with the default user identity and an unspecified sessionMode.
-   *
-   * <p>A connection and session are created for use by the new JMSContext. The connection is
-   * created in stopped mode but will be automatically started when a JMSConsumer is created.
-   *
-   * <p>The behaviour of the session that is created depends on whether this method is called in a
-   * Java SE environment, in the Java EE application client container, or in the Java EE web or EJB
-   * container. If this method is called in the Java EE web or EJB container then the behaviour of
-   * the session also depends on whether or not there is an active JTA transaction in progress.
-   *
-   * <p>In a <b>Java SE environment</b> or in <b>the Java EE application client container</b>:
-   *
-   * <ul>
-   *   <li>The session will be non-transacted and received messages will be acknowledged
-   *       automatically using an acknowledgement mode of {@code JMSContext.AUTO_ACKNOWLEDGE} For a
-   *       definition of the meaning of this acknowledgement mode see the link below.
-   * </ul>
-   *
-   * <p>In a <b>Java EE web or EJB container, when there is an active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The session will participate in the JTA transaction and will be committed or rolled back
-   *       when that transaction is committed or rolled back, not by calling the {@code
-   *       JMSContext}'s {@code commit} or {@code rollback} methods.
-   * </ul>
-   *
-   * <p>In the <b>Java EE web or EJB container, when there is no active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The session will be non-transacted and received messages will be acknowledged
-   *       automatically using an acknowledgement mode of {@code JMSContext.AUTO_ACKNOWLEDGE} For a
-   *       definition of the meaning of this acknowledgement mode see the link below.
-   * </ul>
-   *
-   * @return a newly created JMSContext
-   * @throws JMSRuntimeException if the JMS provider fails to create the JMSContext due to some
-   *     internal error.
-   * @throws JMSSecurityRuntimeException if client authentication fails due to an invalid user name
-   *     or password.
-   * @see JMSContext#AUTO_ACKNOWLEDGE
-   * @see ConnectionFactory#createContext(int)
-   * @see ConnectionFactory#createContext(String, String)
-   * @see ConnectionFactory#createContext(String, String, int)
-   * @see JMSContext#createContext(int)
-   * @since JMS 2.0
-   */
   @Override
-  public JMSContext createContext() {
-    return createContext(JMSContext.AUTO_ACKNOWLEDGE);
-  }
-
-  /**
-   * Creates a JMSContext with the specified user identity and an unspecified sessionMode.
-   *
-   * <p>A connection and session are created for use by the new JMSContext. The connection is
-   * created in stopped mode but will be automatically started when a JMSConsumer.
-   *
-   * <p>The behaviour of the session that is created depends on whether this method is called in a
-   * Java SE environment, in the Java EE application client container, or in the Java EE web or EJB
-   * container. If this method is called in the Java EE web or EJB container then the behaviour of
-   * the session also depends on whether or not there is an active JTA transaction in progress.
-   *
-   * <p>In a <b>Java SE environment</b> or in <b>the Java EE application client container</b>:
-   *
-   * <ul>
-   *   <li>The session will be non-transacted and received messages will be acknowledged
-   *       automatically using an acknowledgement mode of {@code JMSContext.AUTO_ACKNOWLEDGE} For a
-   *       definition of the meaning of this acknowledgement mode see the link below.
-   * </ul>
-   *
-   * <p>In a <b>Java EE web or EJB container, when there is an active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The session will participate in the JTA transaction and will be committed or rolled back
-   *       when that transaction is committed or rolled back, not by calling the {@code
-   *       JMSContext}'s {@code commit} or {@code rollback} methods.
-   * </ul>
-   *
-   * <p>In the <b>Java EE web or EJB container, when there is no active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The session will be non-transacted and received messages will be acknowledged
-   *       automatically using an acknowledgement mode of {@code JMSContext.AUTO_ACKNOWLEDGE} For a
-   *       definition of the meaning of this acknowledgement mode see the link below.
-   * </ul>
-   *
-   * @param userName the caller's user name
-   * @param password the caller's password
-   * @return a newly created JMSContext
-   * @throws JMSRuntimeException if the JMS provider fails to create the JMSContext due to some
-   *     internal error.
-   * @throws JMSSecurityRuntimeException if client authentication fails due to an invalid user name
-   *     or password.
-   * @see JMSContext#AUTO_ACKNOWLEDGE
-   * @see ConnectionFactory#createContext()
-   * @see ConnectionFactory#createContext(int)
-   * @see ConnectionFactory#createContext(String, String, int)
-   * @see JMSContext#createContext(int)
-   * @since JMS 2.0
-   */
-  @Override
-  public JMSContext createContext(String userName, String password) {
-    return createContext(userName, password, JMSContext.AUTO_ACKNOWLEDGE);
-  }
-
-  /**
-   * Creates a JMSContext with the specified user identity and the specified session mode.
-   *
-   * <p>A connection and session are created for use by the new JMSContext. The JMSContext is
-   * created in stopped mode but will be automatically started when a JMSConsumer is created.
-   *
-   * <p>The effect of setting the {@code sessionMode} argument depends on whether this method is
-   * called in a Java SE environment, in the Java EE application client container, or in the Java EE
-   * web or EJB container. If this method is called in the Java EE web or EJB container then the
-   * effect of setting the {@code sessionMode} argument also depends on whether or not there is an
-   * active JTA transaction in progress.
-   *
-   * <p>In a <b>Java SE environment</b> or in <b>the Java EE application client container</b>:
-   *
-   * <ul>
-   *   <li>If {@code sessionMode} is set to {@code JMSContext.SESSION_TRANSACTED} then the session
-   *       will use a local transaction which may subsequently be committed or rolled back by
-   *       calling the {@code JMSContext}'s {@code commit} or {@code rollback} methods.
-   *   <li>If {@code sessionMode} is set to any of {@code JMSContext.CLIENT_ACKNOWLEDGE}, {@code
-   *       JMSContext.AUTO_ACKNOWLEDGE} or {@code JMSContext.DUPS_OK_ACKNOWLEDGE}. then the session
-   *       will be non-transacted and messages received by this session will be acknowledged
-   *       according to the value of {@code sessionMode}. For a definition of the meaning of these
-   *       acknowledgement modes see the links below.
-   * </ul>
-   *
-   * <p>In a <b>Java EE web or EJB container, when there is an active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The argument {@code sessionMode} is ignored. The session will participate in the JTA
-   *       transaction and will be committed or rolled back when that transaction is committed or
-   *       rolled back, not by calling the {@code JMSContext}'s {@code commit} or {@code rollback}
-   *       methods. Since the argument is ignored, developers are recommended to use {@code
-   *       createContext(String userName, String password)} instead of this method.
-   * </ul>
-   *
-   * <p>In the <b>Java EE web or EJB container, when there is no active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The argument {@code acknowledgeMode} must be set to either of {@code
-   *       JMSContext.AUTO_ACKNOWLEDGE} or {@code JMSContext.DUPS_OK_ACKNOWLEDGE}. The session will
-   *       be non-transacted and messages received by this session will be acknowledged
-   *       automatically according to the value of {@code acknowledgeMode}. For a definition of the
-   *       meaning of these acknowledgement modes see the links below. The values {@code
-   *       JMSContext.SESSION_TRANSACTED} and {@code JMSContext.CLIENT_ACKNOWLEDGE} may not be used.
-   * </ul>
-   *
-   * @param userName the caller's user name
-   * @param password the caller's password
-   * @param sessionMode indicates which of four possible session modes will be used.
-   *     <ul>
-   *       <li>If this method is called in a Java SE environment or in the Java EE application
-   *           client container, the permitted values are {@code JMSContext.SESSION_TRANSACTED},
-   *           {@code JMSContext.CLIENT_ACKNOWLEDGE}, {@code JMSContext.AUTO_ACKNOWLEDGE} and {@code
-   *           JMSContext.DUPS_OK_ACKNOWLEDGE}.
-   *       <li>If this method is called in the Java EE web or EJB container when there is an active
-   *           JTA transaction in progress then this argument is ignored.
-   *       <li>If this method is called in the Java EE web or EJB container when there is no active
-   *           JTA transaction in progress, the permitted values are {@code
-   *           JMSContext.AUTO_ACKNOWLEDGE} and {@code JMSContext.DUPS_OK_ACKNOWLEDGE}. In this case
-   *           the values {@code JMSContext.TRANSACTED} and {@code JMSContext.CLIENT_ACKNOWLEDGE}
-   *           are not permitted.
-   *     </ul>
-   *
-   * @return a newly created JMSContext
-   * @throws JMSRuntimeException if the JMS provider fails to create the JMSContext due to some
-   *     internal error.
-   * @throws JMSSecurityRuntimeException if client authentication fails due to an invalid user name
-   *     or password.
-   * @see JMSContext#SESSION_TRANSACTED
-   * @see JMSContext#CLIENT_ACKNOWLEDGE
-   * @see JMSContext#AUTO_ACKNOWLEDGE
-   * @see JMSContext#DUPS_OK_ACKNOWLEDGE
-   * @see ConnectionFactory#createContext()
-   * @see ConnectionFactory#createContext(int)
-   * @see ConnectionFactory#createContext(String, String)
-   * @see JMSContext#createContext(int)
-   * @since JMS 2.0
-   */
-  @Override
-  public JMSContext createContext(String userName, String password, int sessionMode) {
-    Utils.runtimeException(this::ensureInitialized);
-    Utils.runtimeException(() -> validateDummyUserNamePassword(userName, password));
-    return createContext(sessionMode);
-  }
-
-  /**
-   * Creates a JMSContext with the default user identity and the specified session mode.
-   *
-   * <p>A connection and session are created for use by the new JMSContext. The JMSContext is
-   * created in stopped mode but will be automatically started when a JMSConsumer is created.
-   *
-   * <p>The effect of setting the {@code sessionMode} argument depends on whether this method is
-   * called in a Java SE environment, in the Java EE application client container, or in the Java EE
-   * web or EJB container. If this method is called in the Java EE web or EJB container then the
-   * effect of setting the {@code sessionMode} argument also depends on whether or not there is an
-   * active JTA transaction in progress.
-   *
-   * <p>In a <b>Java SE environment</b> or in <b>the Java EE application client container</b>:
-   *
-   * <ul>
-   *   <li>If {@code sessionMode} is set to {@code JMSContext.SESSION_TRANSACTED} then the session
-   *       will use a local transaction which may subsequently be committed or rolled back by
-   *       calling the {@code JMSContext}'s {@code commit} or {@code rollback} methods.
-   *   <li>If {@code sessionMode} is set to any of {@code JMSContext.CLIENT_ACKNOWLEDGE}, {@code
-   *       JMSContext.AUTO_ACKNOWLEDGE} or {@code JMSContext.DUPS_OK_ACKNOWLEDGE}. then the session
-   *       will be non-transacted and messages received by this session will be acknowledged
-   *       according to the value of {@code sessionMode}. For a definition of the meaning of these
-   *       acknowledgement modes see the links below.
-   * </ul>
-   *
-   * <p>In a <b>Java EE web or EJB container, when there is an active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The argument {@code sessionMode} is ignored. The session will participate in the JTA
-   *       transaction and will be committed or rolled back when that transaction is committed or
-   *       rolled back, not by calling the {@code JMSContext}'s {@code commit} or {@code rollback}
-   *       methods. Since the argument is ignored, developers are recommended to use {@code
-   *       createContext()} instead of this method.
-   * </ul>
-   *
-   * <p>In the <b>Java EE web or EJB container, when there is no active JTA transaction in
-   * progress</b>:
-   *
-   * <ul>
-   *   <li>The argument {@code acknowledgeMode} must be set to either of {@code
-   *       JMSContext.AUTO_ACKNOWLEDGE} or {@code JMSContext.DUPS_OK_ACKNOWLEDGE}. The session will
-   *       be non-transacted and messages received by this session will be acknowledged
-   *       automatically according to the value of {@code acknowledgeMode}. For a definition of the
-   *       meaning of these acknowledgement modes see the links below. The values {@code
-   *       JMSContext.SESSION_TRANSACTED} and {@code JMSContext.CLIENT_ACKNOWLEDGE} may not be used.
-   * </ul>
-   *
-   * @param sessionMode indicates which of four possible session modes will be used.
-   *     <ul>
-   *       <li>If this method is called in a Java SE environment or in the Java EE application
-   *           client container, the permitted values are {@code JMSContext.SESSION_TRANSACTED},
-   *           {@code JMSContext.CLIENT_ACKNOWLEDGE}, {@code JMSContext.AUTO_ACKNOWLEDGE} and {@code
-   *           JMSContext.DUPS_OK_ACKNOWLEDGE}.
-   *       <li>If this method is called in the Java EE web or EJB container when there is an active
-   *           JTA transaction in progress then this argument is ignored.
-   *       <li>If this method is called in the Java EE web or EJB container when there is no active
-   *           JTA transaction in progress, the permitted values are {@code
-   *           JMSContext.AUTO_ACKNOWLEDGE} and {@code JMSContext.DUPS_OK_ACKNOWLEDGE}. In this case
-   *           the values {@code JMSContext.TRANSACTED} and {@code JMSContext.CLIENT_ACKNOWLEDGE}
-   *           are not permitted.
-   *     </ul>
-   *
-   * @return a newly created JMSContext
-   * @throws JMSRuntimeException if the JMS provider fails to create the JMSContext due to some
-   *     internal error.
-   * @throws JMSSecurityRuntimeException if client authentication fails due to an invalid user name
-   *     or password.
-   * @see JMSContext#SESSION_TRANSACTED
-   * @see JMSContext#CLIENT_ACKNOWLEDGE
-   * @see JMSContext#AUTO_ACKNOWLEDGE
-   * @see JMSContext#DUPS_OK_ACKNOWLEDGE
-   * @see ConnectionFactory#createContext()
-   * @see ConnectionFactory#createContext(String, String)
-   * @see ConnectionFactory#createContext(String, String, int)
-   * @see JMSContext#createContext(int)
-   * @since JMS 2.0
-   */
-  @Override
-  public JMSContext createContext(int sessionMode) {
-    Utils.runtimeException(this::ensureInitialized);
-    return new PulsarJMSContext(this, sessionMode);
-  }
-
   public void close() {
     synchronized (this) {
       closed = true;

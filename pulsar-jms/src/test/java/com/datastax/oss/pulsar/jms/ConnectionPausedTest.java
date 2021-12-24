@@ -29,11 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import javax.jms.Connection;
 import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
-import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
 import lombok.extern.slf4j.Slf4j;
@@ -69,15 +65,16 @@ public class ConnectionPausedTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
+        connection.setClientID("a");
         // DO NOT START THE CONNECTION
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
           TextMessage textMsg = session.createTextMessage("foo");
-          try (MessageProducer producer = session.createProducer(destination); ) {
-            try (MessageConsumer consumer =
-                session.createSharedDurableConsumer(destination, "sub1")) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageConsumer consumer =
+                session.createDurableSubscriber(destination, "sub1")) {
 
               // send many messages
               producer.send(textMsg);
@@ -93,7 +90,8 @@ public class ConnectionPausedTest {
 
                 // block until the connection is started
                 // the connection will be started in 5 seconds and the test won't be stuck
-                assertEquals("foo", consumer.receive().getBody(String.class));
+                TextMessage message = (TextMessage)consumer.receive();
+                assertEquals("foo", message.getText());
 
                 connection.stop();
 
@@ -104,9 +102,12 @@ public class ConnectionPausedTest {
                 connection.start();
 
                 // now we are able to receive all of the remaining messages
-                assertEquals("foo", consumer.receive(2000).getBody(String.class));
-                assertEquals("foo", consumer.receiveNoWait().getBody(String.class));
-                assertEquals("foo", consumer.receive().getBody(String.class));
+                message = (TextMessage) consumer.receive(2000);
+                assertEquals("foo", message.getText());
+                message = (TextMessage) consumer.receiveNoWait();
+                assertEquals("foo", message.getText());
+                message = (TextMessage) consumer.receive();
+                assertEquals("foo", message.getText());
 
               } finally {
                 executeLater.shutdown();
@@ -125,21 +126,22 @@ public class ConnectionPausedTest {
     properties.put("webServiceUrl", cluster.getAddress());
     CountDownLatch beforeReceive = new CountDownLatch(1);
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
+        connection.setClientID("a");
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
           TextMessage textMsg = session.createTextMessage("foo");
-          try (MessageProducer producer = session.createProducer(destination); ) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
 
             CompletableFuture<Message> consumerResult = new CompletableFuture<>();
             Thread consumerThread =
                 new Thread(
                     () -> {
-                      try (Session consumerSession = connection.createSession();
-                          MessageConsumer consumer =
-                              consumerSession.createSharedDurableConsumer(destination, "sub1")) {
+                      try (PulsarSession consumerSession = connection.createSession();
+                           PulsarMessageConsumer consumer =
+                              consumerSession.createDurableSubscriber(destination, "sub1")) {
                         // no message in the topic, so this consumer will hang
                         beforeReceive.countDown();
                         log.info("receiving...");
@@ -171,7 +173,8 @@ public class ConnectionPausedTest {
               connection.stop();
 
               // ensure that the consumer received the message
-              assertEquals("foo", consumerResult.get().getBody(String.class));
+              TextMessage message = (TextMessage)consumerResult.get();
+              assertEquals("foo", message.getText());
 
             } finally {
               executeLater.shutdown();

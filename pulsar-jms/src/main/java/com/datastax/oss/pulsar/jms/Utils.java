@@ -19,23 +19,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import javax.jms.IllegalStateException;
-import javax.jms.IllegalStateRuntimeException;
 import javax.jms.InvalidClientIDException;
-import javax.jms.InvalidClientIDRuntimeException;
 import javax.jms.InvalidDestinationException;
-import javax.jms.InvalidDestinationRuntimeException;
 import javax.jms.InvalidSelectorException;
-import javax.jms.InvalidSelectorRuntimeException;
 import javax.jms.JMSException;
-import javax.jms.JMSRuntimeException;
 import javax.jms.JMSSecurityException;
-import javax.jms.JMSSecurityRuntimeException;
 import javax.jms.MessageFormatException;
-import javax.jms.MessageFormatRuntimeException;
 import javax.jms.MessageNotWriteableException;
-import javax.jms.MessageNotWriteableRuntimeException;
 import javax.jms.TransactionRolledBackException;
-import javax.jms.TransactionRolledBackRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

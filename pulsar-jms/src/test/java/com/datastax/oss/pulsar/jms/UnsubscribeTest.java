@@ -23,10 +23,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import javax.jms.Connection;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
-import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
 import org.junit.jupiter.api.AfterAll;
@@ -58,15 +54,16 @@ public class UnsubscribeTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
+        connection.setClientID("a");
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
           TextMessage textMsg = session.createTextMessage("foo");
-          try (MessageProducer producer = session.createProducer(destination); ) {
-            try (MessageConsumer consumer =
-                session.createSharedDurableConsumer(destination, "sub1")) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageConsumer consumer =
+                session.createDurableSubscriber(destination, "sub1")) {
               producer.send(textMsg);
               producer.send(textMsg);
               producer.send(textMsg);
@@ -75,8 +72,8 @@ public class UnsubscribeTest {
               assertNotNull(consumer.receive());
               // leave two messages to be consumed
             }
-            try (MessageConsumer consumer =
-                session.createSharedDurableConsumer(destination, "sub1")) {
+            try (PulsarMessageConsumer consumer =
+                session.createDurableSubscriber(destination, "sub1")) {
               assertNotNull(consumer.receive());
             }
             //            // deleting the subscription
@@ -84,8 +81,8 @@ public class UnsubscribeTest {
 
             // recreate the subscription, it will receive only new messages
             // no more messages
-            try (MessageConsumer consumer =
-                session.createSharedDurableConsumer(destination, "sub1")) {
+            try (PulsarMessageConsumer consumer =
+                session.createDurableSubscriber(destination, "sub1")) {
               assertNull(consumer.receive(1000));
 
               producer.send(textMsg);

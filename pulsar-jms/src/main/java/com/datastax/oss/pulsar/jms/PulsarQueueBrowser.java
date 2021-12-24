@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.Reader;
 
 @Slf4j
-final class PulsarQueueBrowser implements QueueBrowser {
+final class PulsarQueueBrowser implements QueueBrowser, AutoCloseable {
   private final PulsarSession session;
   private final PulsarQueue queue;
   private final Reader<byte[]> reader;

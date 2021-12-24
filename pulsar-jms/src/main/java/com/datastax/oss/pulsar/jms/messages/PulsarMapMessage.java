@@ -79,14 +79,6 @@ public final class PulsarMapMessage extends PulsarMessage implements MapMessage 
   }
 
   @Override
-  public <T> T getBody(Class<T> c) throws JMSException {
-    if (c == Map.class) {
-      return (T) map;
-    }
-    throw new MessageFormatException("only java.util.Map is supported");
-  }
-
-  @Override
   public boolean isBodyAssignableTo(Class c) throws JMSException {
     return c == Map.class;
   }

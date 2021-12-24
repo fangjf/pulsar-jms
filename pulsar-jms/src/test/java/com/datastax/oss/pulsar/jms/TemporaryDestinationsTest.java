@@ -26,13 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-import javax.jms.Connection;
-import javax.jms.Destination;
-import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
-import javax.jms.Queue;
-import javax.jms.Session;
+import javax.jms.*;
+
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -76,15 +71,15 @@ public class TemporaryDestinationsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.forceDeleteTemporaryDestinations", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           String name = "persistent://public/default/test-" + UUID.randomUUID();
           Queue serverAddress = session.createQueue(name);
 
           cluster.getService().getAdminClient().topics().createNonPartitionedTopic(name);
 
-          try (MessageProducer producerClient = session.createProducer(serverAddress); ) {
+          try (PulsarMessageProducer producerClient = session.createProducer(serverAddress); ) {
 
             Destination clientAddress = temporaryDestinationMaker.apply(session);
             temporaryDestinationName =
@@ -100,7 +95,7 @@ public class TemporaryDestinationsTest {
                     .contains(temporaryDestinationName));
 
             // subscribe on the temporary queue
-            try (MessageConsumer consumerClient = session.createConsumer(clientAddress); ) {
+            try (PulsarMessageConsumer consumerClient = session.createConsumer(clientAddress); ) {
 
               // send a request
               Message request = session.createTextMessage("request");
@@ -108,23 +103,23 @@ public class TemporaryDestinationsTest {
               producerClient.send(request);
 
               // on the server, receive the request
-              try (MessageConsumer serverSideConsumer = session.createConsumer(serverAddress)) {
-                Message message = serverSideConsumer.receive();
-                assertEquals("request", message.getBody(String.class));
+              try (PulsarMessageConsumer serverSideConsumer = session.createConsumer(serverAddress)) {
+                TextMessage message = (TextMessage)serverSideConsumer.receive();
+                assertEquals("request", message.getText());
 
                 Destination jmsReplyTo = message.getJMSReplyTo();
                 assertEquals(jmsReplyTo, clientAddress);
 
                 Message response = session.createTextMessage("response");
-                try (MessageProducer serverSideTemporaryProducer =
+                try (PulsarMessageProducer serverSideTemporaryProducer =
                     session.createProducer(clientAddress); ) {
                   serverSideTemporaryProducer.send(response);
                 }
               }
 
               // on the client receive the response
-              Message theResponse = consumerClient.receive();
-              assertEquals("response", theResponse.getBody(String.class));
+              TextMessage theResponse = (TextMessage)consumerClient.receive();
+              assertEquals("response", theResponse.getText());
             }
           }
         }

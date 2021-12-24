@@ -25,12 +25,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import javax.jms.Connection;
-import javax.jms.JMSContext;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
 import javax.jms.Queue;
-import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
 import lombok.extern.slf4j.Slf4j;
@@ -66,18 +61,18 @@ public class NoLocalTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.enableClientSideEmulation", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection(); ) {
+      try (PulsarConnection connection = factory.createConnection(); ) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination, null, true); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination, null, true); ) {
             assertEquals(
                 SubscriptionType.Shared, ((PulsarMessageConsumer) consumer1).getSubscriptionType());
             assertTrue(((PulsarMessageConsumer) consumer1).getNoLocal());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 producer.send(textMessage);
@@ -86,8 +81,13 @@ public class NoLocalTest {
             // no message
             assertNull(consumer1.receiveNoWait());
 
-            try (JMSContext connection2 = factory.createContext()) {
-              connection2.createProducer().send(destination, "test");
+            try (PulsarConnection connection2 = factory.createConnection()) {
+              connection2.start();
+              try (PulsarSession session2 = connection2.createSession()) {
+                try (PulsarMessageProducer producer = session2.createProducer(destination)) {
+                  producer.send(session.createTextMessage("test"));
+                }
+              }
             }
 
             // we must be able to receive the message from the second connection
@@ -106,20 +106,20 @@ public class NoLocalTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.enableClientSideEmulation", "false");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection(); ) {
+      try (PulsarConnection connection = factory.createConnection(); ) {
         connection.setClientID("clientId1");
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 = session.createConsumer(destination, null, true); ) {
+          try (PulsarMessageConsumer consumer1 = session.createConsumer(destination, null, true); ) {
             assertEquals(
                 SubscriptionType.Exclusive,
                 ((PulsarMessageConsumer) consumer1).getSubscriptionType());
             assertTrue(((PulsarMessageConsumer) consumer1).getNoLocal());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 producer.send(textMessage);
@@ -128,8 +128,13 @@ public class NoLocalTest {
             // no message
             assertNull(consumer1.receiveNoWait());
 
-            try (JMSContext connection2 = factory.createContext()) {
-              connection2.createProducer().send(destination, "test");
+            try (PulsarConnection connection2 = factory.createConnection()) {
+              connection2.start();
+              try (PulsarSession session2 = connection2.createSession()) {
+                try (PulsarMessageProducer producer = session2.createProducer(destination)) {
+                  producer.send(session.createTextMessage("test"));
+                }
+              }
             }
 
             // we must be able to receive the message from the second connection
@@ -148,21 +153,21 @@ public class NoLocalTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.enableClientSideEmulation", "false");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.setClientID("clientId1");
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 =
-              session.createDurableConsumer(destination, "sub1", null, true); ) {
+          try (PulsarMessageConsumer consumer1 =
+              session.createDurableSubscriber(destination, "sub1", null, true); ) {
             assertEquals(
                 SubscriptionType.Exclusive,
                 ((PulsarMessageConsumer) consumer1).getSubscriptionType());
             assertTrue(((PulsarMessageConsumer) consumer1).getNoLocal());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 producer.send(textMessage);
@@ -171,8 +176,13 @@ public class NoLocalTest {
             // no message
             assertNull(consumer1.receiveNoWait());
 
-            try (JMSContext connection2 = factory.createContext()) {
-              connection2.createProducer().send(destination, "test");
+            try (PulsarConnection connection2 = factory.createConnection()) {
+              connection2.start();
+              try (PulsarSession session2 = connection2.createSession()) {
+                try (PulsarMessageProducer producer = session2.createProducer(destination)) {
+                  producer.send(session.createTextMessage("test"));
+                }
+              }
             }
 
             // we must be able to receive the message from the second connection
@@ -190,21 +200,21 @@ public class NoLocalTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.enableClientSideEmulation", "false");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.setClientID("clientId1");
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 =
+          try (PulsarMessageConsumer consumer1 =
               session.createDurableSubscriber(destination, "sub1", null, true); ) {
             assertEquals(
                 SubscriptionType.Exclusive,
                 ((PulsarMessageConsumer) consumer1).getSubscriptionType());
             assertTrue(((PulsarMessageConsumer) consumer1).getNoLocal());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 producer.send(textMessage);
@@ -213,8 +223,13 @@ public class NoLocalTest {
             // no message
             assertNull(consumer1.receiveNoWait());
 
-            try (JMSContext connection2 = factory.createContext()) {
-              connection2.createProducer().send(destination, "test");
+            try (PulsarConnection connection2 = factory.createConnection()) {
+              connection2.start();
+              try (PulsarSession session2 = connection2.createSession()) {
+                try (PulsarMessageProducer producer = session2.createProducer(destination)) {
+                  producer.send(session2.createTextMessage("test"));
+                }
+              }
             }
 
             // we must be able to receive the message from the second connection
@@ -244,21 +259,21 @@ public class NoLocalTest {
     properties.put("jms.enableClientSideEmulation", "true");
     properties.put("jms.acknowledgeRejectedMessages", acknowledgeRejectedMessages);
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.setClientID("clientId1");
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumerNoLocal =
+          try (PulsarMessageConsumer consumerNoLocal =
               session.createConsumer(destination, null, true); ) {
             assertEquals(
                 SubscriptionType.Shared, // this is a Queue, so the subscription is always shared
                 ((PulsarMessageConsumer) consumerNoLocal).getSubscriptionType());
             assertTrue(((PulsarMessageConsumer) consumerNoLocal).getNoLocal());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 producer.send(textMessage);
@@ -268,14 +283,14 @@ public class NoLocalTest {
             assertNull(consumerNoLocal.receive(3000));
           }
           if (!acknowledgeRejectedMessages) {
-            try (MessageConsumer consumerAllowLocal =
+            try (PulsarMessageConsumer consumerAllowLocal =
                 session.createConsumer(destination, null, false); ) {
               for (int i = 0; i < 10; i++) {
                 assertNotNull(consumerAllowLocal.receive());
               }
             }
           } else {
-            try (MessageConsumer consumerAllowLocal =
+            try (PulsarMessageConsumer consumerAllowLocal =
                 session.createConsumer(destination, null, false); ) {
               assertNull(consumerAllowLocal.receive(1000));
             }

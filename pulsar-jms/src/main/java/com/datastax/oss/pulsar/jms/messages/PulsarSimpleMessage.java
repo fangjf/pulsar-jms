@@ -24,11 +24,6 @@ public final class PulsarSimpleMessage extends PulsarMessage {
   public void clearBody() throws JMSException {}
 
   @Override
-  public <T> T getBody(Class<T> c) throws JMSException {
-    return null;
-  }
-
-  @Override
   public boolean isBodyAssignableTo(Class c) throws JMSException {
     return false;
   }
@@ -44,6 +39,7 @@ public final class PulsarSimpleMessage extends PulsarMessage {
     return "header";
   }
 
+  @Override
   public String toString() {
     return "SimpleMessage{" + properties + "}";
   }

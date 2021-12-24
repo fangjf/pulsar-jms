@@ -136,6 +136,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public boolean readBoolean() throws JMSException {
     checkReadable();
     try {
@@ -161,6 +162,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public byte readByte() throws JMSException {
     checkReadable();
     try {
@@ -179,6 +181,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public short readShort() throws JMSException {
     checkReadable();
     try {
@@ -197,6 +200,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public char readChar() throws JMSException {
     checkReadable();
     try {
@@ -215,6 +219,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public int readInt() throws JMSException {
     checkReadable();
     try {
@@ -233,6 +238,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public long readLong() throws JMSException {
     checkReadable();
     try {
@@ -251,6 +257,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public float readFloat() throws JMSException {
     checkReadable();
     try {
@@ -269,6 +276,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if this type conversion is invalid.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public double readDouble() throws JMSException {
     checkReadable();
     try {
@@ -304,6 +312,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeBoolean(boolean value) throws JMSException {
     checkWritable();
     try {
@@ -320,6 +329,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeByte(byte value) throws JMSException {
     checkWritable();
     try {
@@ -336,6 +346,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeShort(short value) throws JMSException {
     checkWritable();
     try {
@@ -352,6 +363,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeChar(char value) throws JMSException {
     checkWritable();
     try {
@@ -368,6 +380,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeInt(int value) throws JMSException {
     checkWritable();
     try {
@@ -384,6 +397,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeLong(long value) throws JMSException {
     checkWritable();
     try {
@@ -400,6 +414,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeFloat(float value) throws JMSException {
     checkWritable();
     try {
@@ -416,6 +431,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeDouble(double value) throws JMSException {
     checkWritable();
     try {
@@ -451,6 +467,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeBytes(byte[] value) throws JMSException {
     checkWritable();
     if (value == null) {
@@ -476,6 +493,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeBytes(byte[] value, int offset, int length) throws JMSException {
     checkWritable();
     if (value == null) {
@@ -499,6 +517,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageFormatException if the object is invalid.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeObject(Object value) throws JMSException {
     checkWritable();
     if (value == null) {
@@ -569,6 +588,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to reset the message due to some internal error.
    * @throws MessageFormatException if the message has an invalid format.
    */
+  @Override
   public void reset() throws JMSException {
     this.writable = false;
     try {
@@ -596,6 +616,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageNotReadableException if the message is in write-only mode.
    * @since JMS 1.1
    */
+  @Override
   public long getBodyLength() throws JMSException {
     checkReadable();
     return originalMessage.length;
@@ -609,6 +630,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageEOFException if unexpected end of bytes stream has been reached.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public int readUnsignedByte() throws JMSException {
     checkReadable();
     try {
@@ -627,6 +649,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageEOFException if unexpected end of bytes stream has been reached.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public int readUnsignedShort() throws JMSException {
     checkReadable();
     try {
@@ -649,6 +672,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws MessageEOFException if unexpected end of bytes stream has been reached.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public String readUTF() throws JMSException {
     return readString();
   }
@@ -676,6 +700,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to read the message due to some internal error.
    * @throws MessageNotReadableException if the message is in write-only mode.
    */
+  @Override
   public int readBytes(byte[] value, int length) throws JMSException {
     checkReadable();
     if (value == null) {
@@ -700,6 +725,7 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
    * @throws JMSException if the JMS provider fails to write the message due to some internal error.
    * @throws MessageNotWriteableException if the message is in read-only mode.
    */
+  @Override
   public void writeUTF(String value) throws JMSException {
     writeString(value);
   }
@@ -707,22 +733,6 @@ public final class PulsarBytesMessage extends PulsarMessage implements BytesMess
   @Override
   protected String messageType() {
     return "bytes";
-  }
-
-  @Override
-  public <T> T getBody(Class<T> c) throws JMSException {
-    if (c != byte[].class) {
-      throw new MessageFormatException("only class byte[]");
-    }
-    reset();
-    try {
-      if (originalMessage != null) {
-        return (T) originalMessage;
-      }
-      return (T) stream.toByteArray();
-    } finally {
-      reset();
-    }
   }
 
   /**

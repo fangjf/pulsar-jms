@@ -19,10 +19,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
-import javax.jms.Connection;
 import javax.jms.InvalidClientIDException;
-import javax.jms.InvalidClientIDRuntimeException;
-import javax.jms.JMSContext;
 import org.junit.jupiter.api.Test;
 
 public class ClientIDTest {
@@ -33,27 +30,15 @@ public class ClientIDTest {
     properties.put("webServiceUrl", "http://localhost:8080");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
 
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.setClientID("a");
-        try (Connection connection2 = factory.createConnection()) {
+        try (PulsarConnection connection2 = factory.createConnection()) {
           connection2.setClientID("a");
           fail("cannot set a clientId twice");
         } catch (InvalidClientIDException ok) {
         }
       }
-      try (Connection connection2 = factory.createConnection()) {
-        connection2.setClientID("a");
-      }
-
-      try (JMSContext connection = factory.createContext()) {
-        connection.setClientID("a");
-        try (JMSContext connection2 = factory.createContext()) {
-          connection2.setClientID("a");
-          fail("cannot set a clientId twice");
-        } catch (InvalidClientIDRuntimeException ok) {
-        }
-      }
-      try (JMSContext connection2 = factory.createContext()) {
+      try (PulsarConnection connection2 = factory.createConnection()) {
         connection2.setClientID("a");
       }
     }

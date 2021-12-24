@@ -24,13 +24,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import javax.jms.Connection;
-import javax.jms.JMSConsumer;
-import javax.jms.JMSContext;
 import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageFormatRuntimeException;
-import javax.jms.MessageProducer;
+import javax.jms.ObjectMessage;
 import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
@@ -62,23 +57,23 @@ public class AcknowledgementModeTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(Session.AUTO_ACKNOWLEDGE); ) {
+        try (PulsarSession session = connection.createSession(Session.AUTO_ACKNOWLEDGE); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
-          try (MessageProducer producer = session.createProducer(destination); ) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
             TextMessage textMsg = session.createTextMessage("foo");
             textMsg.setStringProperty("test", "foo");
             producer.send(textMsg);
           }
 
-          try (MessageConsumer consumer = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination); ) {
             assertEquals("foo", consumer.receive().getStringProperty("test"));
             // message is automatically acknowledged on receive
           }
 
-          try (MessageConsumer consumer = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination); ) {
             assertNull(consumer.receive(100));
           }
         }
@@ -91,25 +86,25 @@ public class AcknowledgementModeTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(Session.DUPS_OK_ACKNOWLEDGE); ) {
+        try (PulsarSession session = connection.createSession(Session.DUPS_OK_ACKNOWLEDGE); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
-          try (MessageProducer producer = session.createProducer(destination); ) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
             TextMessage textMsg = session.createTextMessage("foo");
             textMsg.setStringProperty("test", "foo");
             producer.send(textMsg);
           }
 
-          try (MessageConsumer consumer = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination); ) {
             assertEquals("foo", consumer.receive().getStringProperty("test"));
             // message is automatically acknowledged on receive, but best effort and async
           }
           // give time for the async ack
           Thread.sleep(1000);
 
-          try (MessageConsumer consumer = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination); ) {
             assertNull(consumer.receive(100));
           }
         }
@@ -122,26 +117,26 @@ public class AcknowledgementModeTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(Session.CLIENT_ACKNOWLEDGE); ) {
+        try (PulsarSession session = connection.createSession(Session.CLIENT_ACKNOWLEDGE); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageProducer producer = session.createProducer(destination); ) {
+          try (PulsarMessageProducer producer = session.createProducer(destination); ) {
             TextMessage textMsg = session.createTextMessage("foo");
             textMsg.setStringProperty("test", "foo");
             producer.send(textMsg);
           }
 
-          try (MessageConsumer consumer = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination); ) {
             assertEquals("foo", consumer.receive().getStringProperty("test"));
             // message is not automatically acknowledged on receive
 
             // closing the consumer
           }
 
-          try (MessageConsumer consumer = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination); ) {
             // receive and ack
             Message receive = consumer.receive();
             assertEquals("foo", receive.getStringProperty("test"));
@@ -149,7 +144,7 @@ public class AcknowledgementModeTest {
           }
 
           // no more messages
-          try (MessageConsumer consumer = session.createConsumer(destination); ) {
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination); ) {
             assertNull(consumer.receive(100));
           }
         }
@@ -162,22 +157,30 @@ public class AcknowledgementModeTest {
     Map<String, Object> properties = new HashMap<>();
     properties.put("webServiceUrl", cluster.getAddress());
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (JMSContext session = factory.createContext()) {
-        Queue destination =
-            session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
+      try (PulsarConnection connection = factory.createConnection()) {
+        connection.start();
+        try (PulsarSession session = connection.createSession()) {
+          Queue destination =
+                  session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-        session.createProducer().send(destination, "foo");
-
-        try (JMSConsumer consumer = session.createConsumer(destination); ) {
-
-          try {
-            // automatically returned to the queue, wrong type
-            consumer.receiveBody(Boolean.class);
-            fail();
-          } catch (MessageFormatRuntimeException ok) {
+          try (PulsarMessageProducer producer = session.createProducer(destination)) {
+            producer.send(session.createTextMessage("foo"));
           }
 
-          assertEquals("foo", consumer.receiveBody(String.class));
+          try (PulsarMessageConsumer consumer = session.createConsumer(destination);) {
+
+            Message message = consumer.receive();
+            try {
+              // automatically returned to the queue, wrong type
+              ObjectMessage objectMessage = (ObjectMessage) message;
+              Boolean body = (Boolean) objectMessage.getObject();
+              fail();
+            } catch (ClassCastException ok) {
+            }
+
+            TextMessage textMessage = (TextMessage) message;
+            assertEquals("foo", textMessage.getText());
+          }
         }
       }
     }

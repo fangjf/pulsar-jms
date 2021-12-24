@@ -23,11 +23,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import javax.jms.Connection;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
 import javax.jms.Queue;
-import javax.jms.Session;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
 import lombok.extern.slf4j.Slf4j;
@@ -63,19 +59,19 @@ public class SelectorsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.enableClientSideEmulation", "true");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Queue destination =
               session.createQueue("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 =
+          try (PulsarMessageConsumer consumer1 =
               session.createConsumer(destination, "lastMessage=TRUE"); ) {
             assertEquals(
                 SubscriptionType.Shared, ((PulsarMessageConsumer) consumer1).getSubscriptionType());
             assertEquals("lastMessage=TRUE", consumer1.getMessageSelector());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 if (i == 9) {
@@ -103,20 +99,20 @@ public class SelectorsTest {
     properties.put("webServiceUrl", cluster.getAddress());
     properties.put("jms.enableClientSideEmulation", "false");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 =
+          try (PulsarMessageConsumer consumer1 =
               session.createConsumer(destination, "lastMessage=TRUE"); ) {
             assertEquals(
                 SubscriptionType.Exclusive,
                 ((PulsarMessageConsumer) consumer1).getSubscriptionType());
             assertEquals("lastMessage=TRUE", consumer1.getMessageSelector());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 if (i == 9) {
@@ -145,60 +141,20 @@ public class SelectorsTest {
     properties.put("jms.enableClientSideEmulation", "false");
     properties.put("jms.clientId", "id");
     try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
+      try (PulsarConnection connection = factory.createConnection()) {
         connection.start();
-        try (Session session = connection.createSession(); ) {
+        try (PulsarSession session = connection.createSession(); ) {
           Topic destination =
               session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
 
-          try (MessageConsumer consumer1 =
-              session.createDurableConsumer(destination, "sub1", "lastMessage=TRUE", false); ) {
+          try (PulsarMessageConsumer consumer1 =
+              session.createDurableSubscriber(destination, "sub1", "lastMessage=TRUE", false); ) {
             assertEquals(
                 SubscriptionType.Exclusive,
                 ((PulsarMessageConsumer) consumer1).getSubscriptionType());
             assertEquals("lastMessage=TRUE", consumer1.getMessageSelector());
 
-            try (MessageProducer producer = session.createProducer(destination); ) {
-              for (int i = 0; i < 10; i++) {
-                TextMessage textMessage = session.createTextMessage("foo-" + i);
-                if (i == 9) {
-                  textMessage.setBooleanProperty("lastMessage", true);
-                }
-                producer.send(textMessage);
-              }
-            }
-
-            TextMessage textMessage = (TextMessage) consumer1.receive();
-            assertEquals("foo-9", textMessage.getText());
-
-            // no more messages
-            assertNull(consumer1.receiveNoWait());
-          }
-        }
-      }
-    }
-  }
-
-  @Test
-  public void sendMessageReceiveFromSharedSubscriptionWithSelector() throws Exception {
-
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("webServiceUrl", cluster.getAddress());
-    properties.put("jms.enableClientSideEmulation", "true");
-    try (PulsarConnectionFactory factory = new PulsarConnectionFactory(properties); ) {
-      try (Connection connection = factory.createConnection()) {
-        connection.start();
-        try (Session session = connection.createSession(); ) {
-          Topic destination =
-              session.createTopic("persistent://public/default/test-" + UUID.randomUUID());
-
-          try (MessageConsumer consumer1 =
-              session.createSharedDurableConsumer(destination, "sub1", "lastMessage=TRUE"); ) {
-            assertEquals(
-                SubscriptionType.Shared, ((PulsarMessageConsumer) consumer1).getSubscriptionType());
-            assertEquals("lastMessage=TRUE", consumer1.getMessageSelector());
-
-            try (MessageProducer producer = session.createProducer(destination); ) {
+            try (PulsarMessageProducer producer = session.createProducer(destination); ) {
               for (int i = 0; i < 10; i++) {
                 TextMessage textMessage = session.createTextMessage("foo-" + i);
                 if (i == 9) {
